@@ -24,6 +24,7 @@ fn lex_next_token() {
         10 != 9;
         \"foobar\"
         \"foo bar\"
+        [1, 2];
     ";
 
 
@@ -113,6 +114,13 @@ fn lex_next_token() {
 
         Token::Str("foobar".to_string()),
         Token::Str("foo bar".to_string()),
+
+        Token::LBracket,
+        Token::Int(1),
+        Token::Comma,
+        Token::Int(2),
+        Token::RBracket,
+        Token::Semicolon,
 
 
         Token::EOF,

@@ -3,6 +3,100 @@ use interpreter::lexer::{Lexer};
 use interpreter::parser::{Parser};
 use interpreter::parser::ast::*;
 use interpreter::evaluator::{Object,evaluate, Environment};
+
+
+#[test]
+fn test_builtins() {
+    let test_case = vec![
+        "len(\"\")",
+        "len(\"four\")",
+        "len(\"hello world\")",
+        "len(1)",
+        "len(\"one\", \"two\")",
+        "len([1,2,3])",
+        "first([\"abc\", 1, 2])",
+        "last([\"abc\", 1, 2])",
+        "push([1,2,3],4)"
+    ];
+
+    let expected = vec![
+        Object::Integer(0),
+        Object::Integer(4),
+        Object::Integer(11),
+        Object::Error("argument to len not supported".to_string()),
+        Object::Error("wrong number of arguments".to_string()),
+        Object::Integer(3),
+        Object::Str("abc".to_string()),
+        Object::Integer(2),
+        Object::Array(vec![Object::Integer(1),Object::Integer(2),Object::Integer(3), Object::Integer(4)])
+    ];
+
+    for (i,s) in expected.iter().enumerate() {
+        let result = test_eval(test_case[i].to_string());
+        println!("{:?}", result);
+        assert_eq!(*s, result);
+    }
+
+}
+
+#[test]
+fn test_array_lit() {
+    let test_case = vec![
+        "[ 1, 2 * 2, 3 + 3 ]"
+    ];
+
+    let expected = vec![Object::Array(vec![
+        Object::Integer(1),
+        Object::Integer(4),
+        Object::Integer(6)
+    ])];
+
+    for (i,s) in expected.iter().enumerate() {
+        let result = test_eval(test_case[i].to_string());
+        println!("{:?}", result);
+        assert_eq!(*s, result);
+    }
+
+
+}
+
+#[test]
+fn test_array_index() {
+    let test_case = vec![
+        "[ 1, 2, 3 ][0]",
+        "[ 1, 2, 3 ][1]",
+        "[ 1, 2, 3 ][2]",
+        "let i = 0; [1][i]",
+        "[ 1, 2, 3 ][1 + 1]",
+        "let myArray = [1,2,3]; myArray[2];",
+        "let myArray = [1,2,3]; myArray[0] + myArray[1] + myArray[2];",
+        "let myArray = [1, 2, 3]; let i = myArray[0]; myArray[i]",
+        "[1, 2, 3][3]",
+        "[1, 2, 3][-1]"
+    ];
+
+    let expected = vec![
+        Object::Integer(1),
+        Object::Integer(2),
+        Object::Integer(3),
+        Object::Integer(1),
+        Object::Integer(3),
+        Object::Integer(3),
+        Object::Integer(6),
+        Object::Integer(2),
+        Object::Null,
+        Object::Null,
+    ];
+
+    for (i,s) in expected.iter().enumerate() {
+        let result = test_eval(test_case[i].to_string());
+        println!("{:?}", result);
+        assert_eq!(*s, result);
+    }
+
+}
+
+
 #[test]
 fn test_eval_integer() {
 

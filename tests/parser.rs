@@ -4,6 +4,77 @@ use interpreter::lexer::{Lexer};
 use interpreter::parser::{Parser};
 use interpreter::parser::ast::*;
 
+
+
+#[test]
+fn idx_expr() {
+    let input = "myArray[1 + 1]";
+
+
+    let expected = vec![
+        Stmt::ExprStmt(
+            Expr::IndexExpr(
+                Box::new(Expr::IdentExpr(Ident("myArray".to_string()))), 
+                Box::new(
+                    Expr::Infix(
+                        Box::new(Expr::LiteralExpr(Literal::Int(1))),
+                        Infix::Plus,
+                        Box::new(Expr::LiteralExpr(Literal::Int(1))),
+                    )
+                )
+            )
+        )
+    ];
+
+
+    let mut l = Lexer::new(input);
+    let mut p = Parser::new(&mut l);
+
+    match p.parse_program() {
+        Ok(program) => {
+            for (i,s) in expected.iter().enumerate() {
+                assert_eq!(*s, program[i]);
+            }
+        },
+        Err(errors) => panic!("Some errors were produced during parsing {:?}", errors)
+    }
+
+}
+#[test]
+fn array_expr() {
+    let input = "[1, 2 * 2, 3 + 3];";
+
+    let mut l = Lexer::new(input);
+    let mut p = Parser::new(&mut l);
+
+
+    let l: Vec<Expr> = vec![
+        Expr::LiteralExpr(Literal::Int(1)),
+        Expr::Infix(
+            Box::new(Expr::LiteralExpr(Literal::Int(2))),
+            Infix::Multiply,
+            Box::new(Expr::LiteralExpr(Literal::Int(2))),
+        ),
+        Expr::Infix(
+            Box::new(Expr::LiteralExpr(Literal::Int(3))),
+            Infix::Plus,
+            Box::new(Expr::LiteralExpr(Literal::Int(3))),
+        )
+    ];
+    let expected = vec![
+        Stmt::ExprStmt(Expr::Array(l))
+    ];
+
+    match p.parse_program() {
+        Ok(program) => {
+            for (i,s) in expected.iter().enumerate() {
+                assert_eq!(*s, program[i]);
+            }
+        },
+        Err(errors) => panic!("Some errors were produced during parsing {:?}", errors)
+    }
+}
+
 #[test]
 fn let_statement() {
     let input = "

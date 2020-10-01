@@ -1,5 +1,5 @@
 [package]
-name = "monkey-rust"
+name = "interpreter"
 version = "0.1.0"
 authors = ["Chris Luckenbaugh"]
 edition = "2018"

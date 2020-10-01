@@ -20,7 +20,8 @@ enum Precedence {
     Sum,
     Product,
     Prefix,
-    Call       
+    Call,
+    Index       
 }
 
 impl PartialOrd for Precedence {
@@ -125,6 +126,7 @@ impl<'a> Parser<'a> {
             Token::Slash => Precedence::Product,
             Token::Asterick => Precedence::Product,
             Token::LParen => Precedence::Call,
+            Token::LBracket => Precedence::Index,
             _ => Precedence::Lowest,
         }
     }
@@ -150,6 +152,7 @@ impl<'a> Parser<'a> {
             Token::LT => Ok(Infix::LT),
             Token::GT => Ok(Infix::GT),
             Token::LParen => Ok(Infix::Call),
+            Token::LBracket => Ok(Infix::Index),
             _ => Err("".into())
         }
     }
@@ -184,9 +187,22 @@ impl<'a> Parser<'a> {
         return Ok(Expr::Call(Box::new(function.clone()), args));
     }
 
+    fn parse_index_expr(&mut self, left: &Expr) -> Result<Expr, Box<Error>> {
+        self.next_token();
+        let index = self.parse_expression(Precedence::Lowest)?;
+        self.expect_peek(&Token::RBracket)?;
+        return Ok(Expr::IndexExpr(Box::new(left.clone()), Box::new(index)));
+    }
+
+
+
     fn parse_infix(&mut self, left: &Expr, operator: Infix) -> Result<Expr, Box<Error>>{
         if Infix::Call == operator {
             return self.parse_call_expr(left);
+        }
+
+        if Infix::Index == operator {
+            return self.parse_index_expr(left)
         }
 
         let precedence = self.curr_precedence();
@@ -293,10 +309,36 @@ impl<'a> Parser<'a> {
             Token::LParen => self.parse_grouped(),
             Token::If => self.parse_if(),
             Token::Function => self.parse_function(),
+            Token::LBracket => self.parse_array(),
             _ => {
                 Err(format!("No prefix defined for {:?}", token).into())
             }
         }
+    }
+
+    fn parse_array(&mut self) -> Result<Expr, Box<Error>> {
+        let elements = self.parse_expression_list(&Token::RBracket)?;
+        return Ok(Expr::Array(elements))
+    }
+
+    fn parse_expression_list(&mut self, end: &Token) -> Result<Vec<Expr>, Box<Error>> {
+        let mut list = vec![];
+        if self.peek_is(end) {
+            self.next_token();
+            return Ok(list);
+        }
+
+        self.next_token();
+        list.push(self.parse_expression(Precedence::Lowest)?);
+
+        while self.peek_is(&Token::Comma) {
+            self.next_token();
+            self.next_token();
+            list.push(self.parse_expression(Precedence::Lowest)?);
+        }
+
+        self.expect_peek(end)?;
+        return Ok(list);
     }
 
     fn parse_expression(&mut self, precedece: Precedence) -> Result<Expr, Box<Error>>  {

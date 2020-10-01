@@ -5,6 +5,9 @@ use std::fmt;
 #[derive(PartialEq, Debug, Eq, Clone, Hash)]
 pub struct Ident(pub String);
 
+#[derive(PartialEq, Debug, Eq, Clone, Hash)]
+pub struct Index(pub usize);
+
 impl fmt::Display for Ident {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         return write!(f, "{}", self.0);
@@ -35,7 +38,8 @@ pub enum Infix {
     LT,
     Equal,
     NotEqual,
-    Call
+    Call,
+    Index
 }
 
 
@@ -48,6 +52,8 @@ pub enum Expr {
     If(Box<Expr>, Block, Option<Block>),
     Fn(Params, Block),
     Call(Box<Expr>, Args),
+    Array(Vec<Expr>),
+    IndexExpr(Box<Expr>, Box<Expr>)
 }
 
 

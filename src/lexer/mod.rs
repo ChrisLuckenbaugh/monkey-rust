@@ -129,6 +129,8 @@ impl<'a> Lexer<'a> {
             '>' => Token::GT,
             '{' => Token::LBrace,
             '}' => Token::RBrace,
+            '[' => Token::LBracket,
+            ']' => Token::RBracket,
             '"' => {
                 Token::Str(self.read_str())
             },

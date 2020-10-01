@@ -5,35 +5,33 @@ use std::{cell::RefCell, collections::HashMap};
 #[derive(PartialEq, Debug, Clone)]
 pub enum Object {
     Integer(i64),
-    IntegerRet(i64),
+    Ret(Box<Object>),
     Boolean(bool),
-    BooleanRet(bool),
     Str(String),
-    StrRet(String),
     Null,
-    NullRet,
     Error(String),
-    Closure(Params, Block, Environment)
+    Closure(Params, Block, Environment),
+    Builtin(String),
+    Array(Vec<Object>)
 }
 
 
-
 pub type Environment = std::collections::HashMap<Ident,RefCell<Object>>;
+
 
 
 impl fmt::Display for Object {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Object::Integer(x) => write!(f, "{}", x),
-            Object::IntegerRet(x) => write!(f, "{}", x),
             Object::Boolean(x) => write!(f, "{}", x),
-            Object::BooleanRet(x) => write!(f, "{}", x),
             Object::Null => write!(f, "null"),
-            Object::NullRet => write!(f, "null"),
             Object::Error(s) => write!(f, "ERROR {}", s),
             Object::Closure(params, block, env) => write!(f, "({:?}) => {:?}", params, block),
-            Object::Str(x) => write!(f, "{}", x),
-            Object::StrRet(x) => write!(f, "{}", x)
+            Object::Str(x) => write!(f, "\"{}\"", x),
+            Object::Ret(x) => write!(f, "{}", *x),
+            Object::Builtin(x) => write!(f, "{}", x),
+            Object::Array(x) => write!(f, "[{}]", x.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(", "))
         }
     }
 }
@@ -56,12 +54,7 @@ pub fn evaluate_let(ident: Ident, expr: Box<Expr>, env: &mut Environment) -> Obj
 
 
 pub fn evaluate_return(expr: Box<Expr>, env: &mut Environment) -> Object {
-    match evaluate_expression(expr, env) {
-        Object::Integer(x) => Object::IntegerRet(x),
-        Object::Boolean(x) => Object::BooleanRet(x),
-        _ => Object::NullRet
-    }
-
+    return Object::Ret(Box::new(evaluate_expression(expr, env)));
 }
 
 pub fn evaluate_expression(expression: Box<Expr>, env: &mut Environment) -> Object {
@@ -72,8 +65,40 @@ pub fn evaluate_expression(expression: Box<Expr>, env: &mut Environment) -> Obje
         Expr::If(condition, consequence, alternative) => evaluate_if(condition, consequence, alternative, env),
         Expr::IdentExpr(ident) => evaluate_ident(ident, env),
         Expr::Fn(params, block) => evaluate_closure(params, block, env),
-        Expr::Call(ident, args) => evaluate_call(ident, args, env)
+        Expr::Call(ident, args) => evaluate_call(ident, args, env),
+        Expr::Array(exprs) => evaluate_array(exprs, env),
+        Expr::IndexExpr(arr, index) => evaluate_index(arr, index, env),
+        _ => Object::Null
     }
+}
+
+
+fn evaluate_index(arr: Box<Expr>, index: Box<Expr>, env: &mut Environment) -> Object {
+
+    let idx = match evaluate_expression(index, env) {
+        Object::Integer(x) => x,
+        _ => return Object::Error("Index is not an integer".to_string())
+    };
+
+
+    match evaluate_expression(arr, env){
+        Object::Array(a) => evaluate_array_index(a, idx),
+        _ => Object::Error("Object is not indexable".to_string())
+    }
+ }
+
+ fn evaluate_array_index(arr: Vec<Object>, idx: i64) -> Object {
+     let max = (arr.len() - 1) as i64;
+     if idx < 0 || idx > max {
+         return Object::Null;
+     } else {
+         return arr[idx as usize].clone();
+     }
+ }
+
+
+fn evaluate_array(exprs: Vec<Expr>, env: &mut Environment) -> Object {
+    return Object::Array(evaluate_expressions(exprs, env));
 }
 
 
@@ -93,10 +118,70 @@ fn is_error(obj:  &Object) -> bool {
     }
 }
 
+fn evaluate_builtin(name: String, args: Vec<Object>) -> Object {
+    match name.as_str() {
+        "len" => {
+            if args.len() != 1 {
+                return Object::Error("wrong number of arguments".to_string());
+            }
+            match &args[0] {
+                Object::Str(x) => Object::Integer(x.len() as i64),
+                Object::Array(x) => Object::Integer(x.len() as i64),
+                _ => Object::Error("argument to len not supported".to_string())
+            }
+        }, 
+        "first" => {
+            if args.len() != 1 {
+                return Object::Error("wrong number of arguments".to_string());
+            }
+            match &args[0] {
+                Object::Array(x) => x[0].clone(),
+                _ => Object::Error("argument to first not supported".to_string())
+            }
+        },
+        "last" => {
+            if args.len() != 1 {
+                return Object::Error("wrong number of arguments".to_string());
+            }
+            match &args[0] {
+                Object::Array(x) => x[x.len()-1].clone(),
+                _ => Object::Error("argument to last not supported".to_string())
+            }
+        },
+        "rest" => {
+            if args.len() != 1 {
+                return Object::Error("wrong number of arguments".to_string());
+            }
+            match &args[0] {
+                Object::Array(x) => Object::Array(x[1..].to_vec()),
+                _ => Object::Error("argument to rest not supported".to_string())
+            }
+        },
+        "push" => {
+            if args.len() != 2 {
+                return Object::Error("wrong number of arguments".to_string());
+            }
+            match &args[0] {
+                Object::Array(x) => {
+                    let mut result = x.clone();
+                    result.push(args[1].clone());
+                    Object::Array(result)
+                }
+                _ => Object::Error("argument to len not supported".to_string())
+            }
+        },   
+        _ => Object::Error("Ident not found".to_string())
+    }
+}
+
 pub fn evaluate_call(expr: Box<Expr>, args: Args, env: &mut Environment) -> Object {
     let function = evaluate_expression(expr, env);
 
     match function {
+        Object::Builtin(name) => {
+            let args = evaluate_expressions(args, env);
+            return evaluate_builtin(name, args)
+        },
         Object::Closure(params, block, cenv) => {
             let args = evaluate_expressions(args, env);
             if args.len() == 1 && is_error(&args[0]) {
@@ -168,7 +253,8 @@ pub fn evaluate_boolean_infix(left: bool, infix: Infix, right: bool) -> Object {
         Infix::Divide => Object::Error("unknown operator".to_string()),
         Infix::LT => Object::Error("unknown operator".to_string()),
         Infix::GT => Object::Error("unknown operator".to_string()),
-        Infix::Call => Object::Error("uncallable".to_string())
+        Infix::Call => Object::Error("uncallable".to_string()),
+        Infix::Index => Object::Error("not indexable".to_string())
     }
 }
 
@@ -206,9 +292,17 @@ pub fn evaluate_literal(literal: Literal) -> Object {
 }
 
 pub fn evaluate_ident(ident: Ident, env: &Environment) -> Object {
-    match env.get(&ident) {
-        Some(obj) => obj.borrow_mut().clone(),
-        None => Object::Error(format!("unknown identifier: {}", ident))
+
+    match ident.0.as_str() {
+        "len" => Object::Builtin("len".to_string()),
+        "first" => Object::Builtin("first".to_string()),
+        "last" => Object::Builtin("last".to_string()),
+        "rest" => Object::Builtin("rest".to_string()),
+        "push" => Object::Builtin("push".to_string()),
+        _ => match env.get(&ident) {
+            Some(obj) => obj.borrow_mut().clone(),
+            None => Object::Error(format!("unknown identifier: {}", ident))
+        }
     }
 }
 
@@ -240,10 +334,7 @@ pub fn evaluate_block(block: &Block, env: &mut Environment) -> Object {
     for stmnt in block {
         let r = evaluate_statement(stmnt.clone(), env);
         match r {
-            Object::IntegerRet(x) => return Object::IntegerRet(x),
-            Object::BooleanRet(x) => return Object::BooleanRet(x),
-            Object::NullRet => return Object::NullRet,
-            Object::StrRet(x) => return Object::StrRet(x),
+            Object::Ret(x) => return Object::Ret(x),
             Object::Error(s) => return Object::Error(s),
             _ => result = r
         }
@@ -258,9 +349,7 @@ pub fn evaluate(program: Program, env: &mut Environment) -> Object {
     for stmnt in program {
         let r = evaluate_statement(stmnt, env);
         match r {
-            Object::IntegerRet(x) => return Object::Integer(x),
-            Object::BooleanRet(x) => return Object::Boolean(x),
-            Object::NullRet => return Object::Null,
+            Object::Ret(x) => return *x,
             Object::Error(s) => return Object::Error(s),
             _ => result = r
         }
