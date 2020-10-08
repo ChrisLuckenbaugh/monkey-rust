@@ -3,8 +3,46 @@ use interpreter::lexer::token::{Token};
 use interpreter::lexer::{Lexer};
 use interpreter::parser::{Parser};
 use interpreter::parser::ast::*;
+use std::{ rc::Rc};
 
 
+
+
+#[test]
+fn hash_expr() {
+    let input = "
+        {\"one\": 1, \"two\": 2, \"three\": 3 };
+        {};
+    ";
+
+
+    let expected = vec![
+        Stmt::ExprStmt(
+            Expr::LiteralExpr(
+                Literal::Hash(vec![
+                    (Expr::LiteralExpr(Literal::Str(Rc::new("one".to_string()))), (Expr::LiteralExpr(Literal::Int(1)))),
+                    (Expr::LiteralExpr(Literal::Str(Rc::new("two".to_string()))), (Expr::LiteralExpr(Literal::Int(2)))),
+                    (Expr::LiteralExpr(Literal::Str(Rc::new("three".to_string()))), (Expr::LiteralExpr(Literal::Int(3))))
+                ])
+            )
+        ),
+        Stmt::ExprStmt(Expr::LiteralExpr(Literal::Hash(vec![])))
+    ];
+
+
+    let mut l = Lexer::new(input);
+    let mut p = Parser::new(&mut l);
+
+    match p.parse_program() {
+        Ok(program) => {
+            for (i,s) in expected.iter().enumerate() {
+                assert_eq!(*s, program[i]);
+            }
+        },
+        Err(errors) => panic!("Some errors were produced during parsing {:?}", errors)
+    }
+
+}
 
 #[test]
 fn idx_expr() {
@@ -74,6 +112,10 @@ fn array_expr() {
         Err(errors) => panic!("Some errors were produced during parsing {:?}", errors)
     }
 }
+
+
+
+
 
 #[test]
 fn let_statement() {
@@ -178,7 +220,7 @@ fn literal_expression() {
         Stmt::ExprStmt(Expr::LiteralExpr(Literal::Int(5))),
         Stmt::ExprStmt(Expr::LiteralExpr(Literal::Bool(true))),
         Stmt::ExprStmt(Expr::LiteralExpr(Literal::Bool(false))),
-        Stmt::ExprStmt(Expr::LiteralExpr(Literal::Str("hello world".to_string())))
+        Stmt::ExprStmt(Expr::LiteralExpr(Literal::Str(Rc::new("hello world".to_string()))))
     ];
 
     match p.parse_program() {
@@ -362,13 +404,13 @@ fn fn_expr() {
     let expected = vec![
         Stmt::ExprStmt(
             Expr::Fn(
-                vec![
+                Rc::new(vec![
                     Ident("x".to_string()),
                     Ident("y".to_string())
-                ],
-                vec![
+                ]),
+                Rc::new(vec![
                     Stmt::ExprStmt(Expr::Infix(Box::new(Expr::IdentExpr(Ident("x".to_string()))), Infix::Plus, Box::new(Expr::IdentExpr(Ident("y".to_string())))))
-                ],
+                ]),
             )
         ),
     ];

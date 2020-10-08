@@ -1,4 +1,6 @@
 
+use std::{ rc::Rc};
+
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum Token {
     Illegal,
@@ -7,7 +9,7 @@ pub enum Token {
     // Identifiers + literals
     Ident(String),
     Int(i64),
-    Str(String),
+    Str(Rc<String>),
 
     // Operators
     Assign,
@@ -26,6 +28,7 @@ pub enum Token {
     // Delimiters
     Comma, 
     Semicolon,
+    Colon,
 
     LBracket,
     RBracket,

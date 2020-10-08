@@ -46,7 +46,7 @@ fn start() {
             Ok(program) => {
                 let evaluated = evaluator::evaluate(program, &mut env);
                 match evaluated {
-                    evaluator::Object::Null => continue,
+                    evaluator::object::Object::Null => continue,
                     _ => println!("{}", evaluated)
                 }
             },

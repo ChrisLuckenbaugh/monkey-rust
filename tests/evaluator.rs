@@ -3,6 +3,7 @@ use interpreter::lexer::{Lexer};
 use interpreter::parser::{Parser};
 use interpreter::parser::ast::*;
 use interpreter::evaluator::{Object,evaluate, Environment};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 
 #[test]
@@ -26,9 +27,9 @@ fn test_builtins() {
         Object::Error("argument to len not supported".to_string()),
         Object::Error("wrong number of arguments".to_string()),
         Object::Integer(3),
-        Object::Str("abc".to_string()),
+        Object::Str(Rc::new("abc".to_string())),
         Object::Integer(2),
-        Object::Array(vec![Object::Integer(1),Object::Integer(2),Object::Integer(3), Object::Integer(4)])
+        Object::Array(Rc::new(vec![Object::Integer(1),Object::Integer(2),Object::Integer(3), Object::Integer(4)]))
     ];
 
     for (i,s) in expected.iter().enumerate() {
@@ -45,11 +46,11 @@ fn test_array_lit() {
         "[ 1, 2 * 2, 3 + 3 ]"
     ];
 
-    let expected = vec![Object::Array(vec![
+    let expected = vec![Object::Array(Rc::new(vec![
         Object::Integer(1),
         Object::Integer(4),
         Object::Integer(6)
-    ])];
+    ]))];
 
     for (i,s) in expected.iter().enumerate() {
         let result = test_eval(test_case[i].to_string());
@@ -59,6 +60,48 @@ fn test_array_lit() {
 
 
 }
+
+#[test]
+fn test_hash_lit() {
+    let test_case = vec![
+        "{\"one\": 1, \"two\": 2, \"three\": 3}"
+    ];
+
+
+    let mut h = HashMap::new();
+    h.insert(Object::Str(Rc::new("one".to_string())), Object::Integer(1));
+    h.insert(Object::Str(Rc::new("two".to_string())), Object::Integer(2));
+    h.insert(Object::Str(Rc::new("three".to_string())), Object::Integer(3));
+
+    let expected = vec![Object::Hash(h)];
+
+    for (i,s) in expected.iter().enumerate() {
+        let result = test_eval(test_case[i].to_string());
+        println!("{:?}", result);
+        assert_eq!(*s, result);
+    }
+
+
+}
+
+#[test]
+fn test_hash_index() {
+    let test_case = vec![
+        "{\"one\": 1, \"two\": 2, \"three\": 3}[\"one\"]"
+    ];
+
+    let expected = vec![Object::Integer(1)];
+
+    for (i,s) in expected.iter().enumerate() {
+        let result = test_eval(test_case[i].to_string());
+        println!("{:?}", result);
+        assert_eq!(*s, result);
+    }
+
+
+}
+
+
 
 #[test]
 fn test_array_index() {
@@ -153,8 +196,8 @@ fn test_eval_str() {
     ];
 
     let expected = vec![
-        Object::Str("Hello World".to_string()),
-        Object::Str("Hello World".to_string())
+        Object::Str(Rc::new("Hello World".to_string())),
+        Object::Str(Rc::new("Hello World".to_string()))
     ];
 
     for (i,s) in expected.iter().enumerate() {
@@ -377,16 +420,16 @@ fn test_function_object() {
 
     let expected = vec![
         Object::Closure(
-            vec![
+            Rc::new(vec![
                 Ident("x".to_string()),
-            ],
-            vec![
+            ]),
+            Rc::new(vec![
                 Stmt::ExprStmt(Expr::Infix(
                     Box::new(Expr::IdentExpr(Ident("x".to_string()))),
                     Infix::Plus,
                     Box::new(Expr::LiteralExpr(Literal::Int(2)))
                 ))
-            ],
+            ]),
             Environment::new()
         )
     ];

@@ -2,6 +2,7 @@ extern crate interpreter;
 
 use interpreter::lexer::token::{Token};
 use interpreter::lexer::{Lexer};
+use std::{ rc::Rc};
 
 #[test]
 fn lex_next_token() {
@@ -25,6 +26,7 @@ fn lex_next_token() {
         \"foobar\"
         \"foo bar\"
         [1, 2];
+        {\"foo\": \"bar\"};
     ";
 
 
@@ -112,14 +114,21 @@ fn lex_next_token() {
         Token::Int(9),
         Token::Semicolon,
 
-        Token::Str("foobar".to_string()),
-        Token::Str("foo bar".to_string()),
+        Token::Str(Rc::new("foobar".to_string())),
+        Token::Str(Rc::new("foo bar".to_string())),
 
         Token::LBracket,
         Token::Int(1),
         Token::Comma,
         Token::Int(2),
         Token::RBracket,
+        Token::Semicolon,
+
+        Token::LBrace,
+        Token::Str(Rc::new("foo".to_string())),
+        Token::Colon,
+        Token::Str(Rc::new("bar".to_string())),
+        Token::RBrace,
         Token::Semicolon,
 
 

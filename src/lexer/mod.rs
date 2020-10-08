@@ -1,5 +1,6 @@
 pub mod token;
 
+use std::{ rc::Rc};
 use token::*;
 pub struct Lexer<'a> {
     input: &'a str,
@@ -131,8 +132,9 @@ impl<'a> Lexer<'a> {
             '}' => Token::RBrace,
             '[' => Token::LBracket,
             ']' => Token::RBracket,
+            ':' => Token::Colon,
             '"' => {
-                Token::Str(self.read_str())
+                Token::Str(Rc::new(self.read_str()))
             },
             '\u{0000}' => Token::EOF,
             _ => {

@@ -1,5 +1,6 @@
 use crate::lexer::token::{Token};
 use std::fmt;
+use std::{ rc::Rc, collections::HashMap};
 
 
 #[derive(PartialEq, Debug, Eq, Clone, Hash)]
@@ -18,7 +19,8 @@ impl fmt::Display for Ident {
 pub enum Literal {
     Int(i64),
     Bool(bool),
-    Str(String)
+    Str(Rc<String>),
+    Hash(Vec<(Expr,Expr)>)
 }
 
 #[derive(PartialEq, Debug, Eq, Clone)]
@@ -43,21 +45,21 @@ pub enum Infix {
 }
 
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Eq, Clone)]
 pub enum Expr {
     IdentExpr(Ident),
     LiteralExpr(Literal),
     Prefix(Prefix, Box<Expr>),
     Infix(Box<Expr>, Infix, Box<Expr>),
     If(Box<Expr>, Block, Option<Block>),
-    Fn(Params, Block),
+    Fn(Rc<Params>, Rc<Block>),
     Call(Box<Expr>, Args),
     Array(Vec<Expr>),
-    IndexExpr(Box<Expr>, Box<Expr>)
+    IndexExpr(Box<Expr>, Box<Expr>),
 }
 
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Eq, Clone)]
 pub enum Stmt {
     LetStmt(Ident, Expr),
     ReturnStmt(Expr),

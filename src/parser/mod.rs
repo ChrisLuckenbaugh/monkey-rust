@@ -4,6 +4,7 @@ use crate::lexer::token::{Token};
 use ast::*;
 use std::cmp::Ordering;
 use std::error::Error;
+use std::{ rc::Rc};
 
 
 pub struct Parser<'a> {
@@ -293,7 +294,7 @@ impl<'a> Parser<'a> {
         let parameters = self.parse_params()?;
         self.expect_peek(&Token::LBrace)?;
         let block = self.parse_block()?;
-        return Ok(Expr::Fn(parameters, block)); 
+        return Ok(Expr::Fn(Rc::new(parameters), Rc::new(block))); 
     }
 
     fn get_prefix(&mut self, token: &Token) -> Result<Expr, Box<Error>> {
@@ -302,7 +303,7 @@ impl<'a> Parser<'a> {
             Token::Int(x) => Ok(Expr::LiteralExpr(Literal::Int(*x))),
             Token::True => Ok(Expr::LiteralExpr(Literal::Bool(true))),
             Token::False => Ok(Expr::LiteralExpr(Literal::Bool(false))),
-            Token::Str(x) => Ok(Expr::LiteralExpr(Literal::Str(x.clone()))),
+            Token::Str(x) => Ok(Expr::LiteralExpr(Literal::Str(Rc::clone(x)))),
             Token::Minus => self.parse_prefix(Prefix::Minus),
             Token::Plus => self.parse_prefix(Prefix::Plus),
             Token::Bang => self.parse_prefix(Prefix::Not),
@@ -310,16 +311,40 @@ impl<'a> Parser<'a> {
             Token::If => self.parse_if(),
             Token::Function => self.parse_function(),
             Token::LBracket => self.parse_array(),
+            Token::LBrace => self.parse_hash_literal(),
             _ => {
                 Err(format!("No prefix defined for {:?}", token).into())
             }
         }
     }
 
+    fn parse_hash_literal(&mut self) -> Result<Expr, Box<Error>> {
+        let mut list = vec![];
+        while !self.peek_is(&Token::RBrace) {
+            self.next_token();
+            let key = self.parse_expression(Precedence::Lowest)?;
+            self.expect_peek(&Token::Colon)?;
+            self.next_token();
+
+            let value = self.parse_expression(Precedence::Lowest)?;
+            list.push((key,value));
+
+            if !self.peek_is(&Token::RBrace) {
+                self.expect_peek(&Token::Comma)?;
+            }
+        }
+        
+        self.expect_peek(&Token::RBrace)?;
+        return Ok(Expr::LiteralExpr(Literal::Hash(list)));
+
+    }
+
     fn parse_array(&mut self) -> Result<Expr, Box<Error>> {
         let elements = self.parse_expression_list(&Token::RBracket)?;
         return Ok(Expr::Array(elements))
     }
+
+
 
     fn parse_expression_list(&mut self, end: &Token) -> Result<Vec<Expr>, Box<Error>> {
         let mut list = vec![];
