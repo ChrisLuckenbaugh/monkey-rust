@@ -6,6 +6,8 @@ use std::error::Error;
 use interpreter::lexer::Lexer;
 use interpreter::parser::Parser;
 use interpreter::evaluator;
+use interpreter::compiler::Compiler;
+use interpreter::vm::VM;
 
 
 
@@ -33,6 +35,7 @@ fn print_errors(errors: &Vec<Box<Error>>) {
 fn start() {
     let prompt = ">> ";
     let mut env = evaluator::Environment::new();
+
     loop {
         print!("{}", prompt);
         io::stdout().flush();
@@ -44,11 +47,28 @@ fn start() {
 
         match p.parse_program() {
             Ok(program) => {
+                let mut compiler = Compiler::new();
+                if let Err(x) = compiler.compile(program) {
+                    println!("{}", x)
+                }
+
+                let mut machine = VM::new(compiler.bytecode());
+                if let Err(x) = machine.run() {
+                    println!("{}", x)
+                }
+
+                match machine.last_popped() {
+                    Some(x) => println!("{}", x),
+                    None => {}
+                }
+
+                
+                /*
                 let evaluated = evaluator::evaluate(program, &mut env);
                 match evaluated {
                     evaluator::object::Object::Null => continue,
                     _ => println!("{}", evaluated)
-                }
+                }*/
             },
             Err(errors) => print_errors(errors)
         }

@@ -2,7 +2,7 @@ extern crate interpreter;
 use interpreter::lexer::{Lexer};
 use interpreter::parser::{Parser};
 use interpreter::parser::ast::*;
-use interpreter::evaluator::{Object,evaluate, Environment};
+use interpreter::evaluator::{object::Object, evaluate, Environment};
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 
@@ -96,6 +96,7 @@ fn test_hash_index() {
         let result = test_eval(test_case[i].to_string());
         println!("{:?}", result);
         assert_eq!(*s, result);
+        
     }
 
 
